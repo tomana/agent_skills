@@ -7,6 +7,10 @@
   T-nuts. **Brass hex standoffs** for boards and floating panels.
 - Printed hole sizes are in `cad.HOLES` (clearance, counterbore, nut trap). The M2.5-M4 rows are proven in PETG;
   print a coupon before relying on a new size.
+- **Socket head, not countersunk, in printed parts**: a counterbore clamps flat and tolerates slightly misplaced
+  holes; a countersink cone wedges the plastic apart (splits PETG, worst when the hole runs along the layers), creeps
+  loose and over-constrains two printed parts. Countersunk only for parts under ~5 mm thick or flush onto wood/sheet.
+  Shopping: "hex head" means an outside hex - search "socket head cap screw" / ISO 4762 / DIN 912.
 - **Nut traps and heat-set inserts over glue**: demountable beats permanent. Glue is fine for flat plates onto a
   printed frame.
 - **Screw length is a window, not a guess**: compute it (`bolt_length`) from the stack and where the tip must

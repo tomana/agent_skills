@@ -29,6 +29,7 @@ HOLES = {
     "M2.5": dict(clear=2.9, cb_d=5.0, cb_h=2.8, nut_af=5.3, nut_h=2.3, verified=True),
     "M3":   dict(clear=3.4, cb_d=6.0, cb_h=3.3, nut_af=5.8, nut_h=2.7, verified=True),
     "M4":   dict(clear=4.5, cb_d=7.6, cb_h=4.3, nut_af=7.3, nut_h=3.5, verified=True),
+    "M5":   dict(clear=5.5, cb_d=9.2, cb_h=5.5, nut_af=8.4, nut_h=4.3, verified=False),
     "M6":   dict(clear=6.6, cb_d=11.2, cb_h=6.5, nut_af=10.4, nut_h=5.4, verified=False),   # clear 6.6 verified
 }
 STANDARD_LENGTHS = (6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 45, 50)
