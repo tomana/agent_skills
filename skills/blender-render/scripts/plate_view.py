@@ -4,12 +4,13 @@
 # dependencies = ["trimesh","numpy","matplotlib","networkx","lxml","scipy","rtree"]
 # ///
 """Render a print plate (3mf or stl) lying on the bed, each part LABELLED with its name from the 3mf (the names
-plate.write_plates gives them), so the layout can be checked - and talked about - before slicing.
+plate.write_plates gives them), so the layout can be checked - and talked about - before slicing. Numbered copies
+of one part (clip_1 .. clip_24) share one label ("clip x24").
 
   plate_view.py plates/brackets.3mf [more.3mf ...] [--bed 180] [--color 0.23,0.49,0.85] [--out-dir .] [--no-labels]
       -> <name>_plate.png per file (title: part count + the footprint in mm)
 """
-import argparse
+import argparse, re
 from pathlib import Path
 import trimesh
 from render import render
@@ -27,6 +28,14 @@ for src in map(Path, a.files):
     else:
         parts = [(s, src.stem)]
     bed = trimesh.creation.box(extents=[a.bed, a.bed, 1]); bed.apply_translation([a.bed/2, a.bed/2, -0.5])
+    # many copies of one part (clip_1 .. clip_24) get ONE label "clip x24" instead of 24 crossing leader lines
+    groups = {}
+    for _, name in parts: groups.setdefault(re.sub(r"[_ -]?\d+$", "", name) or name, []).append(name)
+    shown = {}
+    for key, names in groups.items():
+        if len(names) > 3: shown[names[len(names)//2]] = f"{key} x{len(names)}"
+        else: shown.update({n: n for n in names})
+    parts = [(p, shown.get(name)) for p, name in parts]
     b = trimesh.util.concatenate([p for p, _ in parts]).bounds
     render([(bed, "bed")] + [(p, "part", name if a.labels else None) for p, name in parts],
            colors=dict(part=[float(v) for v in a.color.split(",")], bed=[0.2, 0.21, 0.23]),
