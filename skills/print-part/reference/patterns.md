@@ -11,6 +11,9 @@
   printed frame.
 - **Screw length is a window, not a guess**: compute it (`bolt_length`) from the stack and where the tip must
   land. Into 8 mm T-slot (9 mm deep): tip 6-9 mm past the face.
+- **Design for the screws on hand**: ask the longest length the user keeps of each size (a common answer: M3 up to 30,
+  M2.5 up to 25). When a stack is too thick, **counterbore deep** so the head sits down inside the part - a Ø6
+  counterbore 18 mm deep lets M3 x 25 hold a 30 mm thick part to the one below. Say the exact length in the doc.
 - **Share screws between parts** when they meet: put one part's arm over the other's bracket so one screw clamps
   both. Halves the hardware and aligns the parts. Move brackets toward corners if that's where the other part is.
 
