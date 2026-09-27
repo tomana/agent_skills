@@ -89,9 +89,16 @@ def draw_labels(ax, im, labels, colors, offset, fontsize=12):
         split = float(np.median([p[0] for p in pts])) + 1e-6
     left = sorted([p for p in pts if p[0] < split], key=lambda p: p[1])
     right = sorted([p for p in pts if p[0] >= split], key=lambda p: p[1])
-    gap, pad = fontsize*3.2, w*0.04
+    # sizes in DATA units (image pixels): the image is scaled into the axes, so a 12 pt label is many image pixels
+    # tall when a 1600 px render sits in a 1000 px wide axes. Solve for the scale with the label margins included.
+    fig = ax.figure; pos = ax.get_position(); pt = fig.dpi/72.0
+    A_w, A_h = pos.width*fig.get_figwidth()*fig.dpi, pos.height*fig.get_figheight()*fig.dpi
     longest = max((len(L["text"]) for _, _, L in pts), default=0)
-    margin = pad + longest*fontsize*0.75
+    sides = (1 if left else 0) + (1 if right else 0)
+    pad, char = w*0.03, fontsize*pt*0.62                        # pad in data units, char width in screen px
+    s = max((w + sides*pad)/max(A_w - sides*longest*char, 1.0), h/A_h)   # data units per screen px (equal aspect)
+    gap = fontsize*pt*2.2*s                                     # one boxed line + air
+    margin = pad + longest*char*s
     for side, col in ((-1, left), (1, right)):
         ys = _spread([p[1] for p in col], gap/2, h - gap/2, gap)
         for (px, py, L), ty in zip(col, ys):
