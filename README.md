@@ -41,9 +41,14 @@ M3 lengths (board 18 + arm above the nut): [(30, 6.7)]
 plate bracket_1.3mf: 2 parts  4.0..94.0 x 4.0..170.0  overlap 0.00 mm3  (180 bed: OK)
 ```
 
-| assembly | section through the screws | plate |
-|---|---|---|
-| ![assembly](docs/bracket_assembly.png) | ![section](docs/bracket_section.png) | ![plate](docs/bracket_1_plate.png) |
+![the bracket in place, parts and features labelled](docs/bracket_assembly.png)
+
+Every part and feature under discussion carries its name - the same name in the picture, the file names, the
+docs and the chat, so "the M3 + nut trap" means one thing to the person and the agent.
+
+| section through the screws | plate, parts named as in the 3mf |
+|---|---|
+| ![section](docs/bracket_section.png) | ![plate](docs/bracket_1_plate.png) |
 
 ## The idea in one paragraph
 

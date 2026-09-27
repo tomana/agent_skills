@@ -79,7 +79,15 @@ for g in getattr(sec, "geoms", [sec]):
     for hl in g.interiors: x, y = hl.xy; ax.fill(x, y, fc="white", ec="#123", lw=0.8)
 ax.axvline(0, color="#777", ls=":"); ax.text(-3, 45, "wall", rotation=90, color="#777", ha="right")
 ax.set_aspect("equal"); ax.grid(alpha=0.3); ax.set_xlabel("y (mm from the wall)"); ax.set_ylabel("z (mm)")
-ax.set_xlim(-8, None); ax.set_title("section x = 0: counterbored M4s, M3 + nut trap in the arm", fontsize=10)
+def callout(text, xy, xytext):                            # name the parts and features, same words as the render
+    ax.annotate(text, xy=xy, xytext=xytext, fontsize=9, weight="bold", ha="left", va="center",
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#3b7dd8", lw=1.5),
+                arrowprops=dict(arrowstyle="-", color="#222", lw=1, shrinkB=2))
+callout("M4 counterbore (x2)", (T - WALL["cb_h"]/2, Z_WALL_HOLES[1]), (28, 58))
+callout("back plate", (T/2, 40), (28, 40))
+callout("arm", (40, H - T/2), (28, 74))
+callout("M3 + nut trap", (Y_SHELF_HOLE, H - T + SHELF["nut_h"]/2), (52, 64))
+ax.set_xlim(-8, 95); ax.set_title("section x = 0 through the screws", fontsize=10)
 fig.savefig(str(out/"bracket_section.png"), dpi=90, bbox_inches="tight"); print(f"  -> {out/'bracket_section.png'}")
 
 if a.render:                                              # the sibling skill's renderer
