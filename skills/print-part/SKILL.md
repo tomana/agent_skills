@@ -46,7 +46,9 @@ the fastener table, `bolt_length()`); `scripts/plate.py` packs parts onto plates
 6. **Lay out the plates** (`plate.py`): one 3mf per plate, bounds and overlap printed. Name every output by part
    and version so the user can't print the wrong file.
 7. **Make pictures and show them**: an assembly render, a section through the critical joint, a plate render,
-   a 1:1 guide when something must be cut or marked. The user may be on a phone - send the PNGs, don't describe
+   a 1:1 guide when something must be cut or marked. **Label the parts and features by name** (the
+   `blender-render` callouts, `ax.annotate` on sections) and use the same names in file names, docs and chat -
+   the labelled picture is the shared vocabulary. The user may be on a phone - send the PNGs, don't describe
    them. Iterate on their annotated screenshots and photos of the print.
 8. **Write it down** next to the part (`PART.md`): a status line, what to print on which printer, the hardware
    list with lengths, what was checked (with the numbers) and what was **not** checked.

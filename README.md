@@ -8,7 +8,7 @@ turning meshes and photos into templates and reliefs.
 | skill | for |
 |---|---|
 | [`print-part`](skills/print-part/SKILL.md) | parametric FDM parts: trimesh + manifold3d + shapely as uv scripts, the checks (bed fit, watertight, bodies, clash volume, bolt axes, screw length), plates, fasteners, jigs, splitting big parts |
-| [`blender-render`](skills/blender-render/SKILL.md) | headless Blender (workbench) renders from a JSON manifest: assemblies, before/after steps, plates on the bed |
+| [`blender-render`](skills/blender-render/SKILL.md) | headless Blender (workbench) renders from a JSON manifest, with every part labelled by name: assemblies, before/after steps, plates on the bed |
 | [`mesh-to-physical`](skills/mesh-to-physical/SKILL.md) | a mesh -> 1:1 contour templates on A3; a photo -> depth map -> printable relief |
 
 ## Install
@@ -31,7 +31,7 @@ cd skills/print-part/scripts
 ./example_bracket.py --out /tmp/bracket --render
 ```
 
-A wall shelf bracket, built from named parameters, checked, laid out on two plates and rendered:
+A wall shelf bracket, built from named parameters, checked, laid out on two plates and rendered with its parts and features labelled:
 
 ```
 bracket (world):   30.0 x   80.0 x  90.0  watertight True  bodies 1  fits 180 bed True

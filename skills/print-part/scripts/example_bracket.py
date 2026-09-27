@@ -86,7 +86,10 @@ if a.render:                                              # the sibling skill's 
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]/"blender-render"/"scripts"))
     from render import render
     wall = bx(-120, 120, -8, 0, -10, 200)
-    render([(wall, "wall"), (duct, "duct"), (br, "part")],
+    render([(wall, "wall", "wall"), (duct, "duct", "cable duct"), (br, "part", "bracket"),
+            (br, "part", "M4 counterbore (x2)", (0, T, Z_WALL_HOLES[1])),              # names for features too:
+            (br, "part", "gusset", (W/2, T + G/3, H - T - G/3)),                       # an explicit anchor point
+            (br, "part", "M3 + nut trap", (0, Y_SHELF_HOLE, H))],
            colors=dict(part=[0.23, 0.49, 0.85], duct=[0.62, 0.64, 0.67], wall=[0.93, 0.92, 0.88]),
            camera=dict(target=[0, 30, 55], loc=[-230, 300, 190], lens=45), out=out/"bracket_assembly.png",
            title="Shelf bracket on the wall", subtitle="blue = printed part, grey = cable duct it must clear")
