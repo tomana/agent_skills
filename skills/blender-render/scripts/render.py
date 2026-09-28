@@ -119,8 +119,15 @@ def render(objects, colors, camera, out, title="", subtitle="", res=(1600, 1200)
     steps = objects if isinstance(objects, dict) else {1: objects}
     shots = render_steps(steps, colors, camera, res)
     panels = panels or [(st, "") for st in steps]
-    has_labels = any(shots[st][1] for st, _ in panels)
-    fig, axs = plt.subplots(1, len(panels), figsize=((13 if has_labels else 10)*len(panels), 8.6), squeeze=False)
+    def panel_w(st):
+        """inches for one panel: the picture at its own aspect plus the label columns - a fixed width let long
+        labels squeeze a wide close-up down to a sliver in the middle of empty space"""
+        im, labels = shots[st]; h, w = crop(im)[0].shape[:2]
+        pic = 7.2*w/h
+        if not labels: return max(pic, 5.0)
+        col = max(len(L["text"]) for L in labels)*fontsize*0.62/72 + 0.5
+        return max(pic + (2 if len(labels) > 1 else 1)*col, 8.0)
+    fig, axs = plt.subplots(1, len(panels), figsize=(sum(panel_w(st) for st, _ in panels), 8.6), squeeze=False)
     for ax, (st, t) in zip(axs[0], panels):
         im, labels = shots[st]; im, off = crop(im)
         ax.imshow(im); ax.axis("off")
