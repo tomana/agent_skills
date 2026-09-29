@@ -30,6 +30,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("mesh"); ap.add_argument("side"); ap.add_argument("out")
 ap.add_argument("--head-up", type=float, default=16.3, help="faces above this height are left alone (the head)")
 ap.add_argument("--grow", type=int, default=3, help="px the arm mask is grown by")
+ap.add_argument("--skip", type=int, default=10, help="px of torso beside the arm left out of the fill average")
+ap.add_argument("--fill-sigma", type=float, default=25, help="px: the averaging radius of the fill")
 a = ap.parse_args()
 
 m = read_mesh(a.mesh); m = trimesh.Trimesh(m.vertices, m.faces, process=False)
@@ -54,12 +56,17 @@ for f in F[occluders]:
     dr.polygon([tuple(p) for p in to_px(V[f])], fill=255)
 mask = ndimage.binary_dilation(np.asarray(mask_im) > 0, iterations=a.grow) & alpha
 # fill: nearest un-masked figure pixel, then diffuse inside the mask so the fill carries no streaks
-src = alpha & ~mask
-_, (iy, ix) = ndimage.distance_transform_edt(~src, return_indices=True)
-rgb = img[..., :3].copy(); rgb[mask] = rgb[iy[mask], ix[mask]]
-for _ in range(60):
-    blur = ndimage.uniform_filter(rgb, size=(7, 7, 1))
-    rgb[mask] = blur[mask]
+# the fill = the local AVERAGE of the torso skin a little away from the arm (normalised convolution, sigma --fill-sigma,
+# skipping --skip px next to the arm's edge): the painting shades the torso right beside the arm, and filling from
+# those pixels (nearest-pixel fill, the first version) left a darker, more orange patch on the flank
+src = alpha & ~ndimage.binary_dilation(mask, iterations=a.skip)
+rgb = img[..., :3].copy(); w = src.astype(np.float32)
+num = np.stack([ndimage.gaussian_filter(rgb[..., c]*w, a.fill_sigma) for c in range(3)], -1)
+den = ndimage.gaussian_filter(w, a.fill_sigma)[..., None]
+fill = num/np.maximum(den, 1e-4)
+_, (iy, ix) = ndimage.distance_transform_edt(den[..., 0] < 0.05, return_indices=True)      # far from any skin: nearest
+fill = np.where(den < 0.05, fill[iy, ix], fill)
+rgb[mask] = fill[mask]
 out = np.dstack([rgb, img[..., 3]])
 Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGBA").save(a.out)
 print(f"-> {a.out}: arm filled over {int(mask.sum())} px of the side painting")

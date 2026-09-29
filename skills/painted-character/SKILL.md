@@ -123,7 +123,9 @@ blender -b -P blend_bake_io.py -- export MESH.ply blend/session.blend blend/mesh
 ./blend_bake.py blend/mesh.npz blend/uvs.npz front.png back.png side.png side_noarm.png blend/skin.png   # ~20 s at 4096
 blender -b -P blend_bake_io.py -- build blend/session.blend blend/uvs.npz blend/skin.png blend/skin.glb
 ```
-Every texel samples all panels and mixes them by its interpolated normal (the portrait leads on the face; hidden
+Every texel samples all panels and mixes them by its interpolated normal, weighted also by how deep inside each
+painting's own silhouette it lands (paintings darken at their outlines); the flank hidden behind an arm is filled
+harmonically from the visible surface; the side is pulled to front/back by a smooth field; the front never changes (the portrait leads on the face; hidden
 flanks use the arm-free side). Bake every skin with the same `uvs.npz` so they share one UV layout.
 
 **How to find what's wrong:** `render_like_views.py` renders the textured model in the paintings' own frames (flat
