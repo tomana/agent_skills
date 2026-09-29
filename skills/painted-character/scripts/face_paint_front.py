@@ -33,6 +33,7 @@ ap.add_argument("--img-lm", required=True); ap.add_argument("--mesh-lm", require
 ap.add_argument("--scale", type=float, default=1.0); ap.add_argument("--anchor")
 ap.add_argument("--oval", type=float, default=0.92, help="the blend oval, as a fraction of the painted head's half-size")
 ap.add_argument("--feather", type=float, default=0.10, help="oval edge softness (fraction of the half-size)")
+ap.add_argument("--aa", type=float, default=1.0, help="anti-alias strength (x the shrink factor/2; 0 = none)")
 ap.add_argument("--morph", help="JSON: sculpt[] -> paint[] feature pairs in mesh x/y (+ anchors, mirror_x): bends the "
                                  "portrait so its eyes/mouth land on the sculpted ones")
 a = ap.parse_args()
@@ -45,7 +46,7 @@ F4 = np.asarray(Image.open(a.front).convert("RGBA")).astype(np.float32); H, W = 
 F = F4[..., :3]                                                       # the ALPHA (the figure mask) is kept: the
                                                                       # projector finds the figure by it - without it the
                                                                       # whole frame read as the figure and the face slid
-                                                                      # down onto the cheeks
+                                                                      # down onto the cheeks (2026-09-29)
 px = dimF/max(W, H)                                                   # Blender ortho: the scale spans the larger side
 
 # the imprint's frame (ply_imprint.py): portrait px <-> mesh x/y, grown by --scale about the anchor
@@ -75,6 +76,12 @@ if a.morph:                                                           # sculpted
 bx = A[0] + (mx - A[0])/a.scale; by = A[1] + (my - A[1])/a.scale       # undo the growth
 u = bx/sx + u_mid; v = (crown_y - by)/sy + v_cr                       # -> portrait px
 P = np.asarray(Image.open(a.img).convert("RGB")).astype(np.float32); PH, PW = P.shape[:2]
+# ANTI-ALIAS: a portrait usually has several times the pixels per unit of the front panel; point-sampling it
+# (map_coordinates) folds its canvas grain into pixel noise - the face comes out far noisier than the body. Low-pass
+# it to the output's sampling rate first (sigma 0.5 x the shrink factor).
+shrink = px/(a.scale*min(sx, sy)); aa = 0.5*max(shrink, 1.0)*a.aa
+if aa > 0.3: P = np.stack([ndimage.gaussian_filter(P[..., c], aa) for c in range(3)], -1)
+print(f"   anti-alias: portrait {shrink:.1f} px per output px -> gaussian sigma {aa:.2f} px")
 inside = (u >= 0) & (u < PW - 1) & (v >= 0) & (v < PH - 1)
 samp = np.stack([ndimage.map_coordinates(P[..., c], [np.clip(v, 0, PH - 1), np.clip(u, 0, PW - 1)], order=1) for c in range(3)], -1)
 

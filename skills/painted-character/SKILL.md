@@ -27,6 +27,39 @@ as `blender -b -P script.py -- args`. Conventions: the sculpt is **y-up, face to
 5. **Show a picture at every step** - before/after, the face close-up, the engine screenshot. Most of the fixes
    above started as "that looks off" on a picture.
 6. **Go back to the densest export** for each decimation; decimating a decimated mesh compounds the error.
+7. **Anti-alias every downsample.** A portrait pasted at a quarter of its resolution without a low-pass turns canvas
+   grain into noise (the face came out ~10x noisier than the body); a gaussian at 0.5 x the shrink factor fixes it.
+8. **Measure, then change one thing.** Seam bias, grain (high-pass std), face |diff| after a change - numbers from
+   the bake, next to a picture, beat eyeballing.
+
+## The whole process, as it went (a worked example)
+
+One character, start to finish, over two sittings - the order that worked, and where each step came from:
+
+1. **The target is a picture the person already has** (a painted front portrait). Every later step is judged against it.
+2. **Sculpt toward it**: recolour the sculpt to a contrasting flat colour (`skin_paint.py`), the person smooths the
+   face and reshapes the head so its outline matches the portrait.
+3. **Imprint the portrait as relief** (`ply_imprint.py --morph 0`), tried at several face sizes against the head
+   (x0.95 ... x1.3, rendered side by side); the person picks one.
+4. **Cut the head off** (`head_cut.py`), the person sculpts it alone (much easier in a browser sculptor), **stitch it
+   back** (`head_transplant.py --no-align`: watertight, nothing moves outside the neck band).
+5. **Decimate the head only** to the budget (`region_decimate.py`, e.g. ~20k triangles for the whole figure).
+6. **Render the sculpt** front/back/side with silhouettes (`ply_3views.py`); an **image model repaints each render**
+   in the portrait's look (`codex_img.sh`, reference 1 = our render, reference 2 = the portrait); **warp** each onto
+   its silhouette (IoU ~0.98).
+7. **Trace the sculpted eye rim** (ridge along rays on the dense sculpt, geometric almond fit, corners read off the
+   debug plot) and **paste the portrait's face morphed onto the sculpt** (`face_paint_front.py --morph`, anti-aliased).
+8. **Eye skins** from real pictures (`eye_transplant.py`: a book cover's own eyes; a whole image-model repaint with
+   `--whole`); procedural pupils were dropped - they looked like a cartoon.
+9. **Remove painted light** (`delight.py`, one target for all panels) and the **arm shadows** on the flanks.
+10. **Bake blended** into one atlas (`blend_bake.py`): rim-depth weights, harmonic fill of the arm-hidden flank, a
+    smooth side-to-front/back gain field; the front (the face) never changes. All skins share one `uvs.npz`.
+11. **Check by rendering in the paintings' frames** (`render_like_views.py`) next to the paintings, and in the target
+    engine on recorded motion; fix the cause, re-bake, show.
+12. **Rig** (transfer weights from a good rig of the same body), install the skins, verify in the engine.
+
+What it took to get "really good": the morphs (mouth, then the eye outline), the blended bake (seams), measuring the
+transition bands (panel rims, not panel interiors, were off), and anti-aliasing the face (grain).
 
 ## SculptGL round trips (PLY in, PLY out)
 
