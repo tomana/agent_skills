@@ -19,6 +19,7 @@ original's pixels to the source's (outlines + centroids) samples the source eye 
 --grow px and feathered, so the lids of the original stay where they are.
 
   eye_transplant.py --orig portrait.png --src repaint_or_reference.png --out portrait_eyes.png [--n 32] [--grow 2]
+                    [--src-dark 0.22]   # dark source eyes on a grey canvas
 
 --whole: bend the WHOLE source image into the original's frame instead of pasting only its eyes - both eye outlines
 (paired by angle) + centroids, the mouth line (the darkest row below the nostrils, ~0.85-1.2 x the eye distance under
@@ -38,6 +39,7 @@ ap.add_argument("--whole", action="store_true", help="bend the WHOLE source imag
                 "outline and the image edges pinned), not just its eyes")
 ap.add_argument("--sat", type=float, default=0.40, help="max HSV saturation inside a source eye (shaded sclera ~0.3)")
 ap.add_argument("--skin-sat", type=float, default=0.42, help="min median saturation round a source eye (skin)")
+ap.add_argument("--src-dark", type=float, help="find the source eyes as DARK blobs (luminance < this x 255) instead of unsaturated ones - for black/dark eyes on a grey canvas, which is as unsaturated as the eyes")
 a = ap.parse_args()
 
 O = np.asarray(Image.open(a.orig).convert("RGB")).astype(np.float32)
@@ -67,7 +69,9 @@ def by_angle(P, n):
 def eyes_src(C):
     """the source's two eyes: low-saturation blobs (grey sclera, iris, black pupil) ringed by saturated skin, sorted by x"""
     Hs, Ws = C.shape[:2]; mx, mn = C.max(2), C.min(2); sat = (mx - mn)/np.maximum(mx, 1)
-    low = ndimage.binary_opening(sat < a.sat, iterations=1)             # holes are filled PER BLOB below: a grey frame
+    L = C @ np.array([0.3, 0.59, 0.11], np.float32)
+    low = ndimage.binary_opening((L < a.src_dark*255) if a.src_dark else (sat < a.sat), iterations=1)   # holes are filled
+                                                                        # PER BLOB below: a grey frame
     lab, n = ndimage.label(low); sizes = ndimage.sum(low, lab, range(1, n + 1))   # round a cover would fill everything
     r1, r2 = max(3, int(0.012*Ws)), max(1, int(0.004*Ws)); out = []
     for k in np.argsort(sizes)[::-1][:12] + 1:

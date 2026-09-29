@@ -139,8 +139,9 @@ The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a ma
   skins share one UV layout and crossfade cleanly.
 - **Exact eyes from any picture**: `eye_transplant.py --orig portrait.png --src <picture> --out portrait_eyes.png`
   finds the source's eyes as low-saturation blobs ringed by skin (any image size; a 45 px source eye fills a ~76 px
-  texture eye fine) and maps them into the portrait's almonds by paired outlines. Then the same
-  `face_paint_front.py` -> `delight.py` -> `body_texture_apply.py`, into its own folder.
+  texture eye fine) and maps them into the portrait's almonds by paired outlines. DARK eyes on a grey canvas (the
+  canvas is as unsaturated as the eyes, so the default grabs the background): `--src-dark 0.22` finds them by
+  luminance instead. Then the same `face_paint_front.py` -> `delight.py` -> bake, into its own skin file.
 - An image-model repaint of the portrait ("change ONLY the eyes, like reference 2") gives a sharper, not exact,
   alternative - transplant its eyes the same way, since the rest of its face drifts.
 - Procedurally drawn irises look like a cartoon. Don't.
