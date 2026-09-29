@@ -112,6 +112,24 @@ The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a ma
   alternative - transplant its eyes the same way, since the rest of its face drifts.
 - Procedurally drawn irises look like a cartoon. Don't.
 
+## Bake it blended, and check it the same way (the final step)
+
+Per-triangle projection (`body_texture_apply.py`) switches panel along triangle edges: wherever two paintings meet
+and disagree in tone you get a jagged seam (the temple, the flank). Bake instead:
+
+```bash
+blender -b -P blend_bake_io.py -- export MESH.ply blend/session.blend blend/mesh.npz
+./xatlas_unwrap.py blend/mesh.npz blend/uvs.npz
+./blend_bake.py blend/mesh.npz blend/uvs.npz front.png back.png side.png side_noarm.png blend/skin.png   # ~20 s at 4096
+blender -b -P blend_bake_io.py -- build blend/session.blend blend/uvs.npz blend/skin.png blend/skin.glb
+```
+Every texel samples all panels and mixes them by its interpolated normal (the portrait leads on the face; hidden
+flanks use the arm-free side). Bake every skin with the same `uvs.npz` so they share one UV layout.
+
+**How to find what's wrong:** `render_like_views.py` renders the textured model in the paintings' own frames (flat
+light); put the render next to the painting with a difference map, name the cause (not the symptom), change one
+thing, re-render, show it. The same loop drives the feature morph: trace the rim, overlay, adjust.
+
 ## Handoff to the rig
 
 `textured.glb` is unrigged, UV-mapped, with the atlas `[front | back | side | side without the arm]` embedded.
