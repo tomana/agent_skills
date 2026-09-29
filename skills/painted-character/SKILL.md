@@ -72,7 +72,35 @@ blender -b -P body_texture_apply.py -- $M $T/warp_front_face_flat.png $T/warp_ba
 - `codex_img.sh` needs the Codex CLI installed and logged in with a ChatGPT subscription (no API key); it forces
   Codex's built-in image generation and forbids it from drawing the image with code.
 
+## Tracing a sculpted feature's rim (`eye_outline_pairs.py`)
+
+The step that made painted eyes sit in sculpted almonds, and what failed on the way:
+
+1. **Depth map, not a render.** Rays along -z over the feature on a fine grid (`--step 0.002`) give z(x, y). Trace on
+   the DENSE sculpt (`--trace-mesh`, same shape) - a decimated mesh makes the rim coarse.
+2. **The rim is a line of steep slope.** |grad z| minus its own gaussian blur (a top-hat) turns lid edges into thin
+   bright lines. (A "local depression" test fails when the eye floor is a low dome.)
+3. **The region those lines enclose** round a seed inside the feature is only a guide - its edge sits inside the rim
+   and is jagged.
+4. **Follow the ridge**: 360 rays from the region's centre; on each, the strongest top-hat value in a window just
+   outside the region's edge, refined by a parabola through 3 samples; a median (9 rays) drops outliers and a
+   gaussian smooths along the rim.
+5. **Fit a geometric shape** to the ridge (for an almond: pointed corners, each lid t(1-t)(c0 + c1 t + c2 t^2) over the
+   corner-to-corner chord) and **morph the paint onto the fit, never the raw trace** - a traced outline follows every
+   bump of the sculpt and the paint comes out squiggly. Corners are the weak spot: automatic tip-finding stops short
+   or runs into neighbouring slopes, so read them off the debug picture where the rim lines meet (`--corners`).
+6. **Knobs for the person judging the overlay**: `--grow` (whole shape, moves the corners), `--upper`/`--lower` (one
+   lid's height, corners fixed), `--inset` (inside the rim). With a good ridge trace none should be needed.
+7. **Pair by angle** (~24 points round each centroid), mirror for the other side, add the nose/mouth/chin pairs, and
+   feed the face paste's `--morph`. Check with the painted edge drawn over the grey render and the debug plot.
+
+The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a mask edge): depth map -> top-hat slope
+-> ridge along rays -> smooth -> geometric fit -> paired thin-plate morph.
+
 ## Eyes: skins that differ only in the eyes
+
+- To take a WHOLE repainted face (not just its eyes): `eye_transplant.py --orig portrait.png --src repaint.png --whole`
+  bends it into the portrait's frame (eye outlines, mouth line, head outline, border pinned).
 
 - Keep one portrait with plain (e.g. black) eyes; every variant is that portrait with only the eyes changed, so the
   skins share one UV layout and crossfade cleanly.

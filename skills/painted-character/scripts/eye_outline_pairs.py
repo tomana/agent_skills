@@ -17,6 +17,17 @@ mirrored by the consumer). The other pairs (nose, mouth, chin) and the anchors a
 
   eye_outline_pairs.py --mesh MESH.ply --img portrait.png --img-lm img.json --mesh-lm mesh.json --scale 0.95
                        --base face_morph.json --out face_morph_eyes.json [--eye 0.45,17.62] [--n 24] [--debug d.png]
+
+Tracing the sculpted rim (what works): a depth map of the DENSE sculpt (--trace-mesh, --step 0.002); |grad z| minus its
+gaussian blur (a top-hat) turns the lid edges into thin lines; the region they enclose round --eye is a guide only -
+360 rays from its centre find the strongest line just outside its edge (--rim-window), the peak refined by a
+parabola, then a median (9 rays) and a gaussian (--rim-smooth) along the rim. A GEOMETRIC almond is fitted to that
+ridge (pointed corners, each lid t(1-t)(c0 + c1 t + c2 t^2) over the corner chord); read the corners off --debug where
+the rim lines meet and pass --corners. Knobs: --grow (whole almond), --upper/--lower (one lid, corners fixed), --inset.
+
+  eye_outline_pairs.py --mesh MESH.ply --trace-mesh DENSE.ply --step 0.002 --img portrait.png --img-lm img.json
+                       --mesh-lm mesh.json --scale 0.95 --base face_morph.json --out face_morph_eyes.json
+                       --eye 0.45,17.6 --corners 0.075,17.425,0.735,17.835 --inset 0 --corner-in 0 --debug d.png
 """
 import argparse, json, sys
 from pathlib import Path
@@ -32,13 +43,24 @@ ap.add_argument("--img-lm", required=True); ap.add_argument("--mesh-lm", require
 ap.add_argument("--base", required=True); ap.add_argument("--out", required=True)
 ap.add_argument("--eye", default="0.45,17.62", help="x,y inside the RIGHT sculpted eye (x > 0)")
 ap.add_argument("--n", type=int, default=24); ap.add_argument("--step", type=float, default=0.004)
+ap.add_argument("--inset", type=float, default=0.012, help="the geometric almond sits this far INSIDE the sculpted rim (units)")
+ap.add_argument("--corner-in", type=float, default=0.02, help="and its corners this fraction of the eye length inside")
+ap.add_argument("--grow", type=float, default=1.0, help="scale the geometric almond about its centre (moves the corners too)")
+ap.add_argument("--upper", type=float, default=1.0, help="scale the upper lid's height over the corner-to-corner chord (corners stay)")
+ap.add_argument("--lower", type=float, default=1.0, help="the same for the lower lid")
+ap.add_argument("--rim", default="ridge", choices=["ridge", "region"], help="trace the rim LINE (ridge) or the enclosed region's edge")
+ap.add_argument("--rim-window", type=float, default=0.05, help="how far outside the region's edge to look for the crest (units)")
+ap.add_argument("--trace-mesh", help="trace the rim on this (denser) mesh instead of --mesh - same shape, finer rim")
+ap.add_argument("--rim-smooth", type=float, default=3.0, help="gaussian smoothing of the rim radius along the rays (rays)")
+ap.add_argument("--corners", help="x,y,x,y: the almond's inner and outer TIPS, read off the --debug picture (the rim lines' "
+                                   "meeting points) - the automatic walk stops short or overshoots where the rim smears")
 ap.add_argument("--sigma", type=float, default=0.03)
 ap.add_argument("--debug")
 a = ap.parse_args()
 ex, ey = (float(c) for c in a.eye.split(","))
 
 # ---- the sculpted almond: front depth map, local depression ----
-m = read_mesh(a.mesh); m = trimesh.Trimesh(m.vertices, m.faces, process=False)
+m = read_mesh(a.trace_mesh or a.mesh); m = trimesh.Trimesh(m.vertices, m.faces, process=False)
 xs = np.arange(0.0, 1.0, a.step); ys = np.arange(ey - 0.55, ey + 0.55, a.step)            # right half of the face
 X, Y = np.meshgrid(xs, ys)
 org = np.c_[X.ravel(), Y.ravel(), np.full(X.size, m.vertices[:, 2].max() + 1)]
@@ -75,7 +97,74 @@ def by_angle(P, n):
         cand = P[near] if near.any() else P[[np.argmin(d)]]
         out.append(cand[np.argmax(np.hypot(*(cand - c).T))])
     return np.array(out), c
-S_out, S_c = by_angle(outline_pts(almond, xs, ys), a.n)
+def fit_almond(P, inset, corner_in):
+    """a clean GEOMETRIC almond fitted to a traced outline (a traced outline follows every bump of the sculpt, and
+    paint morphed onto it comes out squiggly): the two corners = the outline's farthest pair; each lid =
+    its offset from the corner-to-corner chord, d(t) = t(1-t)(c0 + c1 t + c2 t^2) - zero at both corners (pointed), smooth, a
+    little asymmetric allowed - least squares to that lid's points. Then pulled INSIDE the rim: each lid by `inset`
+    units, the corners by `corner_in` of the length. Returns a dense closed outline."""
+    D = np.hypot(*(P[:, None] - P[None]).transpose(2, 0, 1)); i, j = np.unravel_index(np.argmax(D), D.shape)
+    A_, B_ = (P[i], P[j]) if P[i, 0] < P[j, 0] else (P[j], P[i])
+    # the traced region stops where the closing sealed the rim, short of the real tips: walk each corner outward along
+    # the chord while there is still RIM (th_ > 0.03) on BOTH sides of the path - i.e. still between the two lids;
+    # where they have met, stop (one-sided checks walked the inner corner on into the nose's slopes)
+    u0 = (B_ - A_)/np.hypot(*(B_ - A_)); n0 = np.array([-u0[1], u0[0]])
+    ry, rx = np.where(th_ > 0.03); R_ = np.c_[xs[rx], ys[ry]]
+    def tip(c, d):
+        last = c
+        for s_ in np.arange(a.step, 0.15, a.step):
+            q = c + d*s_; near = R_[np.hypot(*(R_ - q).T) < 0.03]
+            off = (near - q) @ n0
+            qi = int(round((q[1] - ys[0])/a.step)); qj = int(round((q[0] - xs[0])/a.step))
+            gap = 0 <= qi < th_.shape[0] and 0 <= qj < th_.shape[1] and th_[qi, qj] < 0.03    # q still in the dark gap
+            if gap and (off > 0.004).any() and (off < -0.004).any(): last = q
+            else: break
+        return last
+    A_, B_ = tip(A_, -u0), tip(B_, u0)
+    if a.corners:
+        c_ = [float(v) for v in a.corners.split(",")]; A_, B_ = np.array(c_[:2]), np.array(c_[2:])
+    Lc = np.hypot(*(B_ - A_)); u = (B_ - A_)/Lc; nrm = np.array([-u[1], u[0]])
+    t = (P - A_) @ u/Lc; d = (P - A_) @ nrm
+    keep = (t > 0.03) & (t < 0.97); tt = np.linspace(0, 1, 160); lids = []
+    for side in (1, -1):
+        sel = keep & (np.sign(d) == side)
+        ts_ = t[sel]; X = np.c_[ts_*(1 - ts_), ts_**2*(1 - ts_), ts_**3*(1 - ts_)]
+        coef = np.linalg.lstsq(X, np.abs(d[sel]), rcond=None)[0]
+        dd = np.clip(tt*(1 - tt)*(coef[0] + coef[1]*tt + coef[2]*tt**2) - inset*np.sqrt(np.clip(tt*(1 - tt)*4, 0, 1)), 0, None)
+        lids.append(side*dd*(a.upper if side > 0 else a.lower))     # side +1 = the upper lid (the chord's normal points up)
+    ts = corner_in + tt*(1 - 2*corner_in)                              # corners pulled in along the chord
+    up = A_ + np.outer(ts*Lc, u) + np.outer(lids[0], nrm); lo = A_ + np.outer(ts*Lc, u) + np.outer(lids[1], nrm)
+    return np.vstack([up, lo[::-1][1:-1]])
+S_raw = outline_pts(almond, xs, ys)
+if a.rim == "ridge":
+    # the region's edge sits inside the rim and is jagged; follow the rim LINE itself: from the almond's centre, 360
+    # rays; along each, the strongest top-hat slope in a window just outside the region's edge (the lid's crest)
+    cy_, cx_ = [v.mean() for v in np.where(almond)]; C0 = np.array([xs[0] + cx_*a.step, ys[0] + cy_*a.step])
+    rr = np.arange(0.02, 0.6, a.step/2); ridge = []
+    for th in np.linspace(-np.pi, np.pi, 360, endpoint=False):
+        q = C0 + np.outer(rr, [np.cos(th), np.sin(th)])
+        rows, cols = (q[:, 1] - ys[0])/a.step, (q[:, 0] - xs[0])/a.step
+        inside = ndimage.map_coordinates(almond.astype(float), [rows, cols], order=0, mode="constant") > 0.5
+        if not inside.any(): continue
+        r_in = rr[np.where(inside)[0].max()]
+        w = (rr > r_in - 0.01) & (rr < r_in + a.rim_window)
+        prof = ndimage.map_coordinates(th_, [rows, cols], order=1, mode="constant")
+        if not (w.any() and prof[w].max() > 0.05): ridge.append((th, np.nan)); continue
+        iw = np.where(w)[0]; k = iw[np.argmax(prof[w])]
+        if 0 < k < len(rr) - 1:                                          # sub-sample peak (parabola through 3 samples)
+            y0_, y1_, y2_ = prof[k - 1], prof[k], prof[k + 1]; den = y0_ - 2*y1_ + y2_
+            off = 0.5*(y0_ - y2_)/den if den < 0 else 0.0
+        else: off = 0.0
+        ridge.append((th, rr[k] + off*(rr[1] - rr[0])))
+    ang, rad = np.array(ridge).T; ok = ~np.isnan(rad)
+    rad = np.interp(ang, ang[ok], rad[ok], period=2*np.pi)              # fill the misses round the circle
+    rad = ndimage.median_filter(rad, size=9, mode="wrap")               # drop single-ray outliers
+    rad = ndimage.gaussian_filter1d(rad, a.rim_smooth, mode="wrap")     # smooth along the rim
+    S_raw = C0 + np.c_[rad*np.cos(ang), rad*np.sin(ang)]
+    print(f"   rim ridge: {int(ok.sum())} of 360 rays found the lid crest (median 9 + gaussian {a.rim_smooth} rays)")
+S_model = fit_almond(S_raw, a.inset, a.corner_in)
+S_model = S_model.mean(0) + a.grow*(S_model - S_model.mean(0))
+S_out, S_c = by_angle(S_model, a.n)
 
 # ---- the painted almond, in mesh x/y (the imprint frame) ----
 IL, ML = json.load(open(a.img_lm)), json.load(open(a.mesh_lm))
@@ -114,8 +203,9 @@ print(f"-> {a.out}: sculpted almond {sw:.3f} x {sh:.3f} at ({S_c[0]:.3f}, {S_c[1
 if a.debug:
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(9, 7))
-    ax.imshow(np.clip(dep, 0, 3), extent=[xs[0], xs[-1], ys[0], ys[-1]], origin="lower", cmap="gray")
-    ax.plot(*np.vstack([S_out, S_out[:1]]).T, "c.-", label="sculpted almond")
+    ax.imshow(np.clip(dep, 0, 1.5), extent=[xs[0], xs[-1], ys[0], ys[-1]], origin="lower", cmap="gray")
+    ax.plot(*S_raw.T, ".", ms=2, color="orange", label=f"traced rim ({a.rim})")
+    ax.plot(*np.vstack([S_out, S_out[:1]]).T, "c.-", label="geometric almond, inside the rim")
     ax.plot(*np.vstack([P_out, P_out[:1]]).T, "m.-", label="painted almond (imprint frame)")
     for s_, p_ in zip(S_out, P_out): ax.annotate("", p_, s_, arrowprops=dict(arrowstyle="->", color="y", lw=0.8))
     ax.legend(); ax.set_title("right eye: sculpt -> paint pairs"); fig.tight_layout(); fig.savefig(a.debug, dpi=80)
