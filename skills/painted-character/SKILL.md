@@ -144,6 +144,14 @@ The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a ma
   luminance instead. Then the same `face_paint_front.py` -> `delight.py` -> bake, into its own skin file.
 - An image-model repaint of the portrait ("change ONLY the eyes, like reference 2") gives a sharper, not exact,
   alternative - transplant its eyes the same way, since the rest of its face drifts.
+- A print's dark-grey eyes read grey on the model: `eye_transplant.py --black 4` levels each pasted eye so its 30th
+  percentile lands at 4 (a uniform subtract - the detail inside keeps its contrast).
+- **Shiny eyes**: if the renderer reads a gloss mask + roughness map in the colour UV, `eye_material_maps.py OUT_BASE
+  skin_0.png skin_1.png ...` builds them with no geometry - the skins differ only in the eyes, so where they differ IS
+  the eye (feed only eye-only variants, not one with a whole repainted face). R = glint mask, G = darkening (0),
+  A = the glint's spread (0 = a small wet highlight; a broad lobe on a domed eye lights the whole eye like chrome),
+  roughness low in the eyes, the renderer's default on the skin. Keep grey maps working: have the shader read G / A
+  so a one-channel map (G = R, A = 1) keeps its old meaning.
 - Procedurally drawn irises look like a cartoon. Don't.
 
 ## Bake it blended, and check it the same way (the final step)

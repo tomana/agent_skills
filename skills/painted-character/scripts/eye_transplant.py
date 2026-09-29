@@ -19,7 +19,7 @@ original's pixels to the source's (outlines + centroids) samples the source eye 
 --grow px and feathered, so the lids of the original stay where they are.
 
   eye_transplant.py --orig portrait.png --src repaint_or_reference.png --out portrait_eyes.png [--n 32] [--grow 2]
-                    [--src-dark 0.22]   # dark source eyes on a grey canvas
+                    [--src-dark 0.22] [--black 4]   # dark source eyes on a grey canvas
 
 --whole: bend the WHOLE source image into the original's frame instead of pasting only its eyes - both eye outlines
 (paired by angle) + centroids, the mouth line (the darkest row below the nostrils, ~0.85-1.2 x the eye distance under
@@ -39,6 +39,7 @@ ap.add_argument("--whole", action="store_true", help="bend the WHOLE source imag
                 "outline and the image edges pinned), not just its eyes")
 ap.add_argument("--sat", type=float, default=0.40, help="max HSV saturation inside a source eye (shaded sclera ~0.3)")
 ap.add_argument("--skin-sat", type=float, default=0.42, help="min median saturation round a source eye (skin)")
+ap.add_argument("--black", type=float, help="levels each pasted eye so its 30th-percentile luminance lands here (a uniform subtract, so detail inside keeps its contrast) - a print's dark-grey eye becomes black")
 ap.add_argument("--src-dark", type=float, help="find the source eyes as DARK blobs (luminance < this x 255) instead of unsaturated ones - for black/dark eyes on a grey canvas, which is as unsaturated as the eyes")
 a = ap.parse_args()
 
@@ -99,6 +100,9 @@ for m, cm in zip(EO, ES):
     grow = ndimage.binary_dilation(m, iterations=a.grow)
     r, c = np.where(grow); q = tps(np.c_[c, r].astype(float))
     samp = np.stack([ndimage.map_coordinates(C[..., ch], [q[:, 1], q[:, 0]], order=3, mode='nearest') for ch in range(3)], -1)
+    if a.black is not None:
+        Ls = samp @ np.array([0.3, 0.59, 0.11], np.float32); shift = np.percentile(Ls, 30) - a.black
+        samp = np.clip(samp - max(shift, 0.0), 0, 255)
     w = np.clip(ndimage.distance_transform_edt(grow)/2.5, 0, 1)[r, c][:, None]
     out[r, c] = out[r, c]*(1 - w) + samp*w
     print(f"   eye at ({co[0]:.0f}, {co[1]:.0f}): original {np.ptp(Po[:, 0]):.0f} x {np.ptp(Po[:, 1]):.0f} px <- source "
