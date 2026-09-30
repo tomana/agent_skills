@@ -10,7 +10,7 @@ turning meshes and photos into templates and reliefs.
 | [`print-part`](skills/print-part/SKILL.md) | parametric FDM parts: trimesh + manifold3d + shapely as uv scripts, the checks (bed fit, watertight, bodies, clash volume, bolt axes, screw length), plates, fasteners, jigs, splitting big parts |
 | [`blender-render`](skills/blender-render/SKILL.md) | headless Blender (workbench) renders from a JSON manifest, with every part labelled by name: assemblies, before/after steps, plates on the bed |
 | [`mesh-to-physical`](skills/mesh-to-physical/SKILL.md) | a mesh -> 1:1 contour templates on A3; a photo -> depth map -> printable relief |
-| [`device-mold`](skills/device-mold/SKILL.md) | a printed cradle / mould / stand for existing devices, built from their spec sheets and manual drawings: drop-in pockets, cable furrows and port bays, metal profiles in tunnels with break-away supports, fit tests first |
+| [`device-mold`](skills/device-mold/SKILL.md) | a printed cradle / mould / stand for existing devices, built from their spec sheets and manual drawings: drop-in pockets, cable furrows and port bays, an example cable clip (and other ways to hold cables), metal profiles in tunnels with break-away supports, fit tests first |
 | [`painted-character`](skills/painted-character/SKILL.md) | a sculpted character from a reference painting to a textured mesh: SculptGL round trips, the painting's face imprinted and pasted, image-model repaints warped onto the silhouettes, features morphed onto the sculpt, eye variants from any picture |
 
 ## Install

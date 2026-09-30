@@ -17,7 +17,7 @@ fastener table, the checks) and the **`blender-render`** skill (labelled renders
 
 | script | does |
 |---|---|
-| `scripts/example_cradle.py` | a complete worked cradle for two made-up devices from a spec dict: pockets, cable furrow + port bays, a flat-bar tunnel with break-away hourglass fins, mounting holes, the checks (each shown to bite), a fit-test slice, two plates, a labelled section, `--render` |
+| `scripts/example_cradle.py` | a complete worked cradle for two made-up devices from a spec dict: pockets, two cable furrows + port bays, screw-down cable clips (one example of holding cables), a flat-bar tunnel with break-away hourglass fins, mounting holes, the checks (each shown to bite), a fit-test slice, two plates + a clip plate, labelled sections, `--render` |
 | `scripts/drawing_measure.py` | read millimetres off a manual page: a pixel grid to pick points, scale from a known length, checked on a second one, positions + lengths, a marked-up page to keep |
 
 ```bash
@@ -63,9 +63,32 @@ usually drawn to scale.
   the device the rig holds; the rest stands up.
 - **Cables**: generic **furrows the full length, open at both ends** (a cable can leave either side), not one groove
   per cable; down the legs too if the rig has legs. At each port a wide **bay** (plug width + its straight run),
-  then a narrow groove back to the furrow. Hold cables with **clips**: a strip over the furrow, one screw into an
-  insert in the land between two furrows, a tab down into each furrow; recess each clip into a shallow pocket
-  (0.3 clearance) so it drops in square.
+  then a narrow groove back to the furrow. How the cables are *held* in the furrows is a separate choice - below.
+
+### Holding the cables - the example's clips are one answer, not the answer
+
+The example models **screw-down clips**: a strip across two furrows, one M3 into a heat-set insert in the land
+between them, a tab down into each furrow, each clip in its own shallow recess (+0.3) so it drops in square;
+checked in place (no collision; tabs without clearance must collide), the insert keeping 1.5 mm to the furrows, the
+screw length against the insert hole; printed top face down on their own plate (`out/clip_section.png`). That
+suits a rig that travels and whose cables rarely change. **Look for the solution that fits the use** - ask the user
+how often cables go in and out, whether the rig travels, whether it is seen - and consider, for example:
+
+- **Snap lips** on the furrow walls (a small overhang the cable pushes past) - no hardware, quick to change, but the
+  lips are thin and wear; print a test coupon first.
+- **Hook-and-loop straps** through slots under the land - fast, adjustable, gentle on thick cables.
+- **Zip-tie anchors**: a tunnel under a bridge every few centimetres - cheapest, secure, but cut to change.
+- **A sliding or snap-on cover** over the whole furrow (a rail on both walls) - tidy and seen-proof, one part.
+- **Magnets** in the land and a printed cap with magnets - no screws, fast; mind the strength and the polarity.
+- **Friction alone**: a furrow a little narrower than the cable bundle, or a TPU insert strip - nothing to lose.
+- **Combs / cable guides** at the ends only, when the furrow is deep enough to hold cables by itself.
+
+![the example cradle from behind: two furrows, the clips in their recesses](../../docs/cradle_assembly.png)
+![section through a clip in place](../../docs/cradle_clip_section.png)
+
+Whatever it is, model it like the clips: the part in place, a check that it clears (and one that shows the check
+bites), a fit test before the big print.
+
 - **Metal profiles** (flat bar, angle) through **closed tunnels**, open at both ends: 0.4 mm per side, +1 mm
   headroom on top (a wide roof sags). The printed pieces **thread onto the profiles** - stronger and simpler than
   puzzle joints.
@@ -116,5 +139,6 @@ A check that was never shown to catch the bad case proves nothing: "no clash" fr
 
 - Don't place a port from a photo or a small model and print the big part; get the drawing or measure.
 - Don't make one groove per cable; generic furrows that run through survive the next device swap.
+- Don't take the example's clips as the default: pick the cable holder from how the rig is used (see above).
 - Don't split through a pocket's thin wall or a clip pocket; don't put a seam through the supports.
 - Don't skip the fit test because the numbers "look right".
