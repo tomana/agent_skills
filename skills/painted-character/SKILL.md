@@ -154,6 +154,9 @@ The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a ma
   so a one-channel map (G = R, A = 1) keeps its old meaning.
 - **Sculpt with the texture visible**: `atlas_to_sculptgl.py` puts the baked atlas onto the dense sculpt as vertex colours
   (closest point on the decimated mesh -> its UVs -> the atlas; written linear, the way SculptGL expects).
+- **Hand-fixed paint back into the texture**: sculpt with the texture on, drag the eyes until they are right, then
+  `vcolors_to_atlas.py` bakes that PLY's colours into the atlas (round trip median 0, p99 8 levels), and
+  `eye_outline_pairs.py --paint-ply <that PLY>` makes the dark eye paint the target outline for every other eye skin.
 - Procedurally drawn irises look like a cartoon. Don't.
 
 ## Bake it blended, and check it the same way (the final step)

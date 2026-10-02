@@ -55,6 +55,9 @@ ap.add_argument("--rim-smooth", type=float, default=3.0, help="gaussian smoothin
 ap.add_argument("--corners", help="x,y,x,y: the almond's inner and outer TIPS, read off the --debug picture (the rim lines' "
                                    "meeting points) - the automatic walk stops short or overshoots where the rim smears")
 ap.add_argument("--sigma", type=float, default=0.03)
+ap.add_argument("--close", type=int, default=3, help="px of closing on the rim lines before the region fill - raise it if a gap in the rim lets the region leak")
+ap.add_argument("--paint-ply", help="take the target almond from the DARK eye paint of this SculptGL PLY (same frame) instead of the traced rim - eyes placed by hand while sculpting with the texture on)")
+ap.add_argument("--paint-dark", type=float, default=8.0, help="max luminance of the eye paint (SculptGL linear bytes: eye ~0, skin ~40)")
 ap.add_argument("--debug")
 a = ap.parse_args()
 ex, ey = (float(c) for c in a.eye.split(","))
@@ -75,7 +78,7 @@ th_ = G - ndimage.gaussian_filter(G, a.sigma/a.step)
 ci, cj = np.argmin(np.abs(ys - ey)), np.argmin(np.abs(xs - ex))
 almond = None
 for t in (0.03, 0.05, 0.08, 0.12, 0.2, 0.3):
-    rim = ndimage.binary_closing(th_ > t, iterations=3)
+    rim = ndimage.binary_closing(th_ > t, iterations=a.close)
     lab, _ = ndimage.label(~rim & valid); k = lab[ci, cj]
     if k == 0: continue
     reg = lab == k; area = reg.sum()*a.step**2
@@ -164,6 +167,22 @@ if a.rim == "ridge":
     print(f"   rim ridge: {int(ok.sum())} of 360 rays found the lid crest (median 9 + gaussian {a.rim_smooth} rays)")
 S_model = fit_almond(S_raw, a.inset, a.corner_in)
 S_model = S_model.mean(0) + a.grow*(S_model - S_model.mean(0))
+if a.paint_ply:                                                         # the hand-placed paint wins over the trace
+    pm = read_mesh(a.paint_ply); PV = pm.vertices; PC = pm.visual.vertex_colors[:, :3].astype(float)
+    Lp = PC @ np.array([0.3, 0.59, 0.11]); fr = pm.vertex_normals[:, 2] > 0
+    sel = fr & (PV[:, 0] > 0) & (np.abs(PV[:, 1] - ey) < 0.55) & (Lp < a.paint_dark)
+    ci_ = np.round((PV[sel, 1] - ys[0])/a.step).astype(int); cj_ = np.round((PV[sel, 0] - xs[0])/a.step).astype(int)
+    ok_ = (ci_ >= 0) & (ci_ < len(ys)) & (cj_ >= 0) & (cj_ < len(xs))
+    pmask = np.zeros((len(ys), len(xs)), bool); pmask[ci_[ok_], cj_[ok_]] = True
+    pmask = ndimage.binary_fill_holes(ndimage.binary_closing(ndimage.binary_dilation(pmask, iterations=2), iterations=3))
+    labp, nlp = ndimage.label(pmask); pmask = labp == (np.argmax(ndimage.sum(pmask, labp, range(1, nlp + 1))) + 1)
+    pmask = ndimage.binary_erosion(pmask, iterations=2)                 # undo the dilation
+    Pp = outline_pts(pmask, xs, ys); cpp = Pp.mean(0)
+    thp = np.arctan2(Pp[:, 1] - cpp[1], Pp[:, 0] - cpp[0]); o = np.argsort(thp)
+    rp = ndimage.gaussian_filter1d(np.hypot(*(Pp[o] - cpp).T), 2, mode="wrap")
+    S_model = cpp + np.c_[rp*np.cos(thp[o]), rp*np.sin(thp[o])]
+    print(f"   target almond = the eye PAINT of {Path(a.paint_ply).name}: {int(sel.sum())} dark verts, "
+          f"{np.ptp(S_model[:, 0]):.3f} x {np.ptp(S_model[:, 1]):.3f} at ({cpp[0]:.3f}, {cpp[1]:.3f})")
 S_out, S_c = by_angle(S_model, a.n)
 
 # ---- the painted almond, in mesh x/y (the imprint frame) ----
