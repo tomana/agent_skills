@@ -157,6 +157,9 @@ The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a ma
 - **Hand-fixed paint back into the texture**: sculpt with the texture on, drag the eyes until they are right, then
   `vcolors_to_atlas.py` bakes that PLY's colours into the atlas (round trip median 0, p99 8 levels), and
   `eye_outline_pairs.py --paint-ply <that PLY>` makes the dark eye paint the target outline for every other eye skin.
+- **Weld the seam weights last** (`weld_seam_weights.py`): UV seams split vertices, and copies with different bone
+  weights crack open when the rig bends (thin cracks / light specks at the neck). One weight set per position fixes it
+  without touching the texture, the shape or the rest of the rig. Check: co-located pairs with different weights = 0.
 - Procedurally drawn irises look like a cartoon. Don't.
 
 ## Bake it blended, and check it the same way (the final step)
