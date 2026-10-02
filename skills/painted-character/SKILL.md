@@ -152,6 +152,8 @@ The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a ma
   A = the glint's spread (0 = a small wet highlight; a broad lobe on a domed eye lights the whole eye like chrome),
   roughness low in the eyes, the renderer's default on the skin. Keep grey maps working: have the shader read G / A
   so a one-channel map (G = R, A = 1) keeps its old meaning.
+- **Sculpt with the texture visible**: `atlas_to_sculptgl.py` puts the baked atlas onto the dense sculpt as vertex colours
+  (closest point on the decimated mesh -> its UVs -> the atlas; written linear, the way SculptGL expects).
 - Procedurally drawn irises look like a cartoon. Don't.
 
 ## Bake it blended, and check it the same way (the final step)
