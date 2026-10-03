@@ -160,6 +160,8 @@ The same recipe fits any sculpted feature with a crisp rim (lips, nostrils, a ma
 - **Weld the seam weights last** (`weld_seam_weights.py`): UV seams split vertices, and copies with different bone
   weights crack open when the rig bends (thin cracks / light specks at the neck). One weight set per position fixes it
   without touching the texture, the shape or the rest of the rig. Check: co-located pairs with different weights = 0.
+- **Raised arms crumple the chest beside the neck** when the upper-arm bone owns the chest top inside the joint:
+  `shoulder_field.py` fades it out inside the joint (to the collar bone). Weight-pass order: neck -> shoulder -> weld.
 - Procedurally drawn irises look like a cartoon. Don't.
 
 ## Bake it blended, and check it the same way (the final step)
