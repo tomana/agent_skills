@@ -91,7 +91,9 @@ def draw_labels(ax, im, labels, colors, offset, fontsize=12):
     right = sorted([p for p in pts if p[0] >= split], key=lambda p: p[1])
     # sizes in DATA units (image pixels): the image is scaled into the axes, so a 12 pt label is many image pixels
     # tall when a 1600 px render sits in a 1000 px wide axes. Solve for the scale with the label margins included.
-    fig = ax.figure; pos = ax.get_position(); pt = fig.dpi/72.0
+    # original=True: the box BEFORE imshow's equal aspect shrinks it to the picture - the shrunk width left no room
+    # for long labels, the scale blew up and the picture came out as a dot
+    fig = ax.figure; pos = ax.get_position(original=True); pt = fig.dpi/72.0
     A_w, A_h = pos.width*fig.get_figwidth()*fig.dpi, pos.height*fig.get_figheight()*fig.dpi
     longest = max((len(L["text"]) for _, _, L in pts), default=0)
     sides = (1 if left else 0) + (1 if right else 0)
